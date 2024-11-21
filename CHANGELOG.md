@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ### Added
 
+- Shows GitLab issues on Start Work quick-pick [#3779](https://github.com/gitkraken/vscode-gitlens/issues/3779)
 - Adds the ability to get autolinks for branches using branch name [#3547](https://github.com/gitkraken/vscode-gitlens/issues/3547)
 
 ## [16.0.2] - 2024-11-18
