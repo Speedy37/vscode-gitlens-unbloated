@@ -48,6 +48,7 @@ export class ActionList extends LitElement {
 		super.disconnectedCallback();
 	}
 
+	/** is used to remove tooltip under the context menu */
 	@state()
 	private open = false;
 
@@ -58,7 +59,6 @@ export class ActionList extends LitElement {
 		e.preventDefault();
 
 		this.open = true;
-
 		const event = new CustomEvent('open-actions-menu', {
 			detail: {
 				items: this.items
@@ -81,9 +81,8 @@ export class ActionList extends LitElement {
 		});
 		this.dispatchEvent(contextMenuEvent);
 		this.modifier = undefined;
+
 		const handleClick = () => {
-			const ev = new CustomEvent('close-actions-menu');
-			this.dispatchEvent(ev);
 			this.open = false;
 			window.removeEventListener('keyup', handleClick);
 			window.removeEventListener('mousedown', handleClick);
@@ -99,7 +98,6 @@ export class ActionList extends LitElement {
 	}
 
 	private renderMoreOptions(from: number) {
-		console.log('render action', this.open);
 		return html`
 			<action-item
 				icon="more"
@@ -137,6 +135,7 @@ export class ActionList extends LitElement {
 		`;
 	}
 
+	// TODO it would be fine to think about hover-to-focus behavior for all places that use this component
 	private handleKeydown(e: KeyboardEvent) {
 		if (this.modifier) {
 			return;

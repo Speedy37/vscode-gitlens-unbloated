@@ -92,7 +92,31 @@ export class GlOverview extends SignalWatcher(LitElement) {
 		});
 	}
 
-	private prevAttr = JSON.parse(document.body.getAttribute('data-vscode-context') ?? '{}');
+	// TODO: can be moved to a separate function (maybe for home scope only)
+	private applyContext(context: object) {
+		const prevContext = JSON.parse(document.body.getAttribute('data-vscode-context') ?? '{}');
+		document.body.setAttribute(
+			'data-vscode-context',
+			JSON.stringify({
+				...prevContext,
+				...context,
+			}),
+		);
+		// clear context immediatelly after the contextmenu is opened to avoid randomly clicked contextmenu being filled
+		setTimeout(() => {
+			document.body.setAttribute('data-vscode-context', JSON.stringify(prevContext));
+		});
+	}
+
+	private handleBranchContext(e: typeof GlBranchSection.OpenContextMenuEvent) {
+		let context = 'gitlens:home';
+		e.detail.items.forEach(x => {
+			if (x.href) {
+				context += `+${x.href}`;
+			}
+		});
+		this.applyContext({ webviewItem: context, ...e.detail.branchRefs, type: 'branch' });
+	}
 
 	private renderComplete(overview: Overview, isFetching = false) {
 		if (overview == null) return nothing;
@@ -103,27 +127,7 @@ export class GlOverview extends SignalWatcher(LitElement) {
 				.isFetching=${isFetching}
 				.repo=${repository.path}
 				.branches=${repository.branches.recent}
-				@branch-context-opened=${(e: typeof GlBranchSection.OpenContextMenuEvent) => {
-					this.prevAttr = JSON.parse(document.body.getAttribute('data-vscode-context') ?? '{}');
-					let context = 'gitlens:home';
-					e.detail.items.forEach(x => {
-						if (x.href) {
-							context += `+${x.href}`;
-						}
-					});
-					document.body.setAttribute(
-						'data-vscode-context',
-						JSON.stringify({
-							...this.prevAttr,
-							webviewItem: context,
-							...e.detail.branchRefs,
-							type: 'branch',
-						}),
-					);
-				}}
-				@branch-context-closed=${() => {
-					document.body.setAttribute('data-vscode-context', JSON.stringify(this.prevAttr));
-				}}
+				@branch-context-opened=${this.handleBranchContext}
 			>
 				<gl-branch-threshold-filter
 					slot="heading-actions"

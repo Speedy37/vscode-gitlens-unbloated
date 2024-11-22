@@ -6,7 +6,7 @@ import { ifDefined } from 'lit/directives/if-defined.js';
 import { when } from 'lit/directives/when.js';
 import type { GitTrackingState } from '../../../../../git/models/branch';
 import { createWebviewCommandLink } from '../../../../../system/webview';
-import type { GetOverviewBranch, OpenInGraphParams, State } from '../../../../home/protocol';
+import type { BranchRef, GetOverviewBranch, OpenInGraphParams, State } from '../../../../home/protocol';
 import { stateContext } from '../../../home/context';
 import type { ActionList } from '../../../shared/components/actions/action-list';
 import { ipcContext } from '../../../shared/context';
@@ -209,7 +209,30 @@ export class GlActiveWork extends SignalWatcher(LitElement) {
 		`;
 	}
 
-	private prevAttr = JSON.parse(document.body.getAttribute('data-vscode-context') ?? '{}');
+	private applyContext(context: object) {
+		const prevContext = JSON.parse(document.body.getAttribute('data-vscode-context') ?? '{}');
+		document.body.setAttribute(
+			'data-vscode-context',
+			JSON.stringify({
+				...prevContext,
+				...context,
+			}),
+		);
+		setTimeout(() => {
+			document.body.setAttribute('data-vscode-context', JSON.stringify(prevContext));
+		});
+	}
+
+	private handleBranchContext(branchRefs: BranchRef, e: typeof ActionList.OpenContextMenuEvent) {
+		let context = 'gitlens:home';
+		e.detail.items.forEach(x => {
+			if (x.href) {
+				context += `+${x.href}`;
+			}
+		});
+		// clear context immediatelly after the contextmenu is opened to avoid randomly clicked contextmenu being filled
+		this.applyContext({ webviewItem: context, ...branchRefs, type: 'branch' });
+	}
 
 	private renderActions(branch: GetOverviewBranch, repo: string) {
 		const branchRefs = {
@@ -242,27 +265,7 @@ export class GlActiveWork extends SignalWatcher(LitElement) {
 			return nothing;
 		}
 		return html`<action-list
-			@open-actions-menu=${(e: typeof ActionList.OpenContextMenuEvent) => {
-				this.prevAttr = JSON.parse(document.body.getAttribute('data-vscode-context') ?? '{}');
-				let context = 'gitlens:home';
-				e.detail.items.forEach(x => {
-					if (x.href) {
-						context += `+${x.href}`;
-					}
-				});
-				document.body.setAttribute(
-					'data-vscode-context',
-					JSON.stringify({
-						...this.prevAttr,
-						webviewItem: context,
-						...branchRefs,
-						type: 'branch',
-					}),
-				);
-			}}
-			@close-actions-menu=${() => {
-				document.body.setAttribute('data-vscode-context', JSON.stringify(this.prevAttr));
-			}}
+			@open-actions-menu=${this.handleBranchContext.bind(this, branchRefs)}
 			limit=${3}
 			.items=${actions}
 			class="branch-item__actions"
