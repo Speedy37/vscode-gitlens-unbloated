@@ -7399,7 +7399,7 @@
 				"icon": "$(globe)"
 			},
 			{
-				"command": "gitlens.home.openPullRequestComparison",
+				"command": "gitlens.home.openPullRequestChanges",
 				"title": "Open Pull Request Changes",
 				"icon": "$(request-changes)"
 			},
@@ -11084,7 +11084,7 @@
 					"when": "false"
 				},
 				{
-					"command": "gitlens.home.openPullRequestComparison",
+					"command": "gitlens.home.openPullRequestChanges",
 					"when": "false"
 				},
 				{
@@ -16241,8 +16241,8 @@
 			],
 			"webview/context": [
 				{
-					"command": "gitlens.home.openPullRequestComparison",
-					"when": "webviewItem =~ /gitlens:home\\b(?=.*?\\b\\+.*gitlens\\.home\\.openPullRequestComparison\\b)/",
+					"command": "gitlens.home.openPullRequestChanges",
+					"when": "webviewItem =~ /gitlens:home\\b(?=.*?\\b\\+.*gitlens\\.home\\.openPullRequestChanges\\b)/",
 					"group": "1_gitlens_action@1"
 				},
 				{
