@@ -4,7 +4,7 @@ import { when } from 'lit/directives/when.js';
 import type { Commands } from '../../../../../constants.commands';
 import type { GitTrackingState } from '../../../../../git/models/branch';
 import type { BranchRef, GetOverviewBranch, OpenInGraphParams } from '../../../../home/protocol';
-import type { ActionItemProps } from '../../../shared/components/actions/action-list';
+import type { ActionList } from '../../../shared/components/actions/action-list';
 import { srOnlyStyles } from '../../../shared/components/styles/lit/a11y.css';
 import { linkStyles } from '../../shared/components/vscode.css';
 import '../../../shared/components/code-icon';
@@ -81,6 +81,10 @@ export class GlSection extends LitElement {
 
 @customElement('gl-branch-section')
 export class GlBranchSection extends LitElement {
+	static get OpenContextMenuEvent(): CustomEvent<{ items: (typeof ActionList.ItemProps)[]; branchRefs: BranchRef }> {
+		throw new Error('type field OpenContextMenuEvent cannot be used as a value');
+	}
+
 	@property({ type: String }) label!: string;
 	@property() repo!: string;
 	@property({ type: Array }) branches!: GetOverviewBranch[];
@@ -105,28 +109,21 @@ export class GlBranchSection extends LitElement {
 						this.branches.map(
 							branch =>
 								html`<gl-branch-card
-									@open-actions-menu=${(
-										e: CustomEvent<{ branchRefs: BranchRef; items: ActionItemProps[] }>,
-									) => {
-										const evt = new CustomEvent<{
-											branchRefs: BranchRef;
-											items: ActionItemProps[];
-										}>('branch-context-opened', {
+									@open-actions-menu=${(e: typeof GlBranchCard.OpenContextMenuEvent) => {
+										const evt = new CustomEvent('branch-context-opened', {
 											detail: {
 												branchRefs: e.detail.branchRefs,
 												items: e.detail.items,
 											},
-										});
+										}) satisfies typeof GlBranchSection.OpenContextMenuEvent;
 										this.dispatchEvent(evt);
 									}}
-									@close-actions-menu=${(e: CustomEvent<{ items: ActionItemProps[] }>) => {
+									@close-actions-menu=${(e: CustomEvent) => {
 										const evt = new CustomEvent<{
 											branch: GetOverviewBranch;
-											// items: ActionItemProps[];
 										}>('branch-context-closed', {
 											detail: {
 												branch: branch,
-												// items: e.detail.items,
 											},
 										});
 										this.dispatchEvent(evt);
@@ -241,6 +238,10 @@ export const branchCardStyles = css`
 @customElement('gl-branch-card')
 export class GlBranchCard extends LitElement {
 	static override styles = [linkStyles, branchCardStyles];
+
+	static get OpenContextMenuEvent(): CustomEvent<{ items: (typeof ActionList.ItemProps)[]; branchRefs: BranchRef }> {
+		throw new Error('type field OpenContextMenuEvent cannot be used as a value');
+	}
 
 	@property()
 	repo!: string;
@@ -378,7 +379,7 @@ export class GlBranchCard extends LitElement {
 	}
 
 	private renderActions() {
-		const actions: ActionItemProps[] = [];
+		const actions: (typeof ActionList.ItemProps)[] = [];
 		if (this.branch.pr) {
 			actions.push(
 				{
@@ -404,6 +405,14 @@ export class GlBranchCard extends LitElement {
 				label: 'Open Worktree',
 				icon: 'browser',
 				href: this.createCommandLink('gitlens.home.openWorktree'),
+				modifiers: [
+					{
+						key: 'alt',
+						label: 'Open Worktree in New Window',
+						href: this.createCommandLink('gitlens.home.openWorktreeInNewWindow'),
+						icon: 'empty-window',
+					},
+				],
 			});
 		} else {
 			actions.push({
@@ -419,7 +428,7 @@ export class GlBranchCard extends LitElement {
 				label: 'Fetch',
 				icon: 'gl-repo-fetch',
 				href: this.createCommandLink('gitlens.home.fetch'),
-				modifiers: [
+				modifiers: this.branch.upstream && [
 					{
 						key: 'alt',
 						label: 'Pull',
@@ -444,17 +453,14 @@ export class GlBranchCard extends LitElement {
 		return html`<action-list
 			limit=${3}
 			class="branch-item__actions"
-			@open-actions-menu=${(e: CustomEvent<{ items: ActionItemProps[] }>) => {
-				const ev = new CustomEvent<{ items: ActionItemProps[]; branchRefs: BranchRef }>('open-actions-menu', {
+			@open-actions-menu=${(e: typeof ActionList.OpenContextMenuEvent) => {
+				const ev = new CustomEvent('open-actions-menu', {
 					detail: { items: e.detail.items, branchRefs: this.branchRefs },
-				});
+				}) satisfies typeof GlBranchCard.OpenContextMenuEvent;
 				this.dispatchEvent(ev);
 			}}
 			@close-actions-menu=${() => {
-				const ev = new CustomEvent<{ items: ActionItemProps[]; branchRefs: BranchRef }>(
-					'close-actions-menu',
-					{},
-				);
+				const ev = new CustomEvent('close-actions-menu');
 				this.dispatchEvent(ev);
 			}}
 			.items=${actions}

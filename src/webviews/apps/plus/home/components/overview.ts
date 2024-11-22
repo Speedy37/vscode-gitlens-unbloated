@@ -3,13 +3,13 @@ import { SignalWatcher } from '@lit-labs/signals';
 import { css, html, LitElement, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { when } from 'lit/directives/when.js';
-import type { BranchRef, GetOverviewResponse, OverviewRecentThreshold, State } from '../../../../home/protocol';
+import type { GetOverviewResponse, OverviewRecentThreshold, State } from '../../../../home/protocol';
 import { SetOverviewFilter } from '../../../../home/protocol';
 import { stateContext } from '../../../home/context';
-import type { ActionItemProps } from '../../../shared/components/actions/action-list';
 import { ipcContext } from '../../../shared/context';
 import type { HostIpc } from '../../../shared/ipc';
 import { linkStyles } from '../../shared/components/vscode.css';
+import type { GlBranchSection } from './branch-section';
 import type { OverviewState } from './overviewState';
 import { overviewStateContext } from './overviewState';
 import '../../../shared/components/skeleton-loader';
@@ -103,12 +103,7 @@ export class GlOverview extends SignalWatcher(LitElement) {
 				.isFetching=${isFetching}
 				.repo=${repository.path}
 				.branches=${repository.branches.recent}
-				@branch-context-opened=${(
-					e: CustomEvent<{
-						branchRefs: BranchRef;
-						items: ActionItemProps[];
-					}>,
-				) => {
+				@branch-context-opened=${(e: typeof GlBranchSection.OpenContextMenuEvent) => {
 					this.prevAttr = JSON.parse(document.body.getAttribute('data-vscode-context') ?? '{}');
 					let context = 'gitlens:home';
 					e.detail.items.forEach(x => {
@@ -116,7 +111,6 @@ export class GlOverview extends SignalWatcher(LitElement) {
 							context += `+${x.href}`;
 						}
 					});
-					console.log({ context: context });
 					document.body.setAttribute(
 						'data-vscode-context',
 						JSON.stringify({

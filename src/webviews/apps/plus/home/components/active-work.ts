@@ -8,7 +8,7 @@ import type { GitTrackingState } from '../../../../../git/models/branch';
 import { createWebviewCommandLink } from '../../../../../system/webview';
 import type { GetOverviewBranch, OpenInGraphParams, State } from '../../../../home/protocol';
 import { stateContext } from '../../../home/context';
-import type { ActionItemProps } from '../../../shared/components/actions/action-list';
+import type { ActionList } from '../../../shared/components/actions/action-list';
 import { ipcContext } from '../../../shared/context';
 import type { HostIpc } from '../../../shared/ipc';
 import { linkStyles } from '../../shared/components/vscode.css';
@@ -216,7 +216,7 @@ export class GlActiveWork extends SignalWatcher(LitElement) {
 			repoPath: repo,
 			branchId: branch.id,
 		};
-		const actions: ActionItemProps[] = [];
+		const actions: (typeof ActionList.ItemProps)[] = [];
 		if (branch.pr) {
 			actions.push(
 				{
@@ -242,7 +242,7 @@ export class GlActiveWork extends SignalWatcher(LitElement) {
 			return nothing;
 		}
 		return html`<action-list
-			@open-actions-menu=${(e: CustomEvent<{ items: ActionItemProps[] }>) => {
+			@open-actions-menu=${(e: typeof ActionList.OpenContextMenuEvent) => {
 				this.prevAttr = JSON.parse(document.body.getAttribute('data-vscode-context') ?? '{}');
 				let context = 'gitlens:home';
 				e.detail.items.forEach(x => {
@@ -250,7 +250,6 @@ export class GlActiveWork extends SignalWatcher(LitElement) {
 						context += `+${x.href}`;
 					}
 				});
-				console.log({ context: context });
 				document.body.setAttribute(
 					'data-vscode-context',
 					JSON.stringify({

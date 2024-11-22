@@ -6,7 +6,7 @@ import { when } from 'lit/directives/when.js';
 import './action-item';
 import './action-nav';
 
-export interface ActionItemProps {
+interface ActionItemProps {
 	icon: string;
 	label: string;
 	href?: string;
@@ -15,10 +15,13 @@ export interface ActionItemProps {
 
 @customElement('action-list')
 export class ActionList extends LitElement {
-	// static override styles = css``;
-
+	static get ItemProps(): ActionItemProps {
+		throw new Error('type field ItemProps cannot be used as a value');
+	}
+	static get OpenContextMenuEvent(): CustomEvent<{ items: ActionItemProps[] }> {
+		throw new Error('type field OpenContextMenuEvent cannot be used as a value');
+	}
 	private _slotSubscriptionsDisposer?: () => void;
-
 	@property({ type: Array })
 	private items: Array<ActionItemProps> = [];
 
@@ -31,14 +34,11 @@ export class ActionList extends LitElement {
 	override connectedCallback(): void {
 		const handleKeydown = this.handleKeydown.bind(this);
 		const handleKeyup = this.handleKeyup.bind(this);
-		const handleOpenMore = this.handleOpenMore.bind(this);
 		window.addEventListener('keydown', handleKeydown, false);
 		window.addEventListener('keyup', handleKeyup, false);
-		this.addEventListener('open-actions-menu', handleOpenMore);
 		this._slotSubscriptionsDisposer = () => {
 			window.removeEventListener('keydown', handleKeydown, false);
 			window.removeEventListener('keyup', handleKeyup, false);
-			this.removeEventListener('open-actions-menu', handleOpenMore);
 		};
 		super.connectedCallback();
 	}
@@ -59,11 +59,14 @@ export class ActionList extends LitElement {
 
 		this.open = true;
 
-		const event = new CustomEvent<{ items: ActionItemProps[] }>('open-actions-menu', {
+		const event = new CustomEvent('open-actions-menu', {
 			detail: {
-				items: this.items.slice(from),
+				items: this.items
+					.slice(from)
+					.map((item): ActionItemProps[] => [item, ...(item.modifiers ?? [])])
+					.flat(),
 			},
-		});
+		}) satisfies typeof ActionList.OpenContextMenuEvent;
 		this.dispatchEvent(event);
 
 		const contextMenuEvent = new PointerEvent('contextmenu', {
@@ -77,7 +80,7 @@ export class ActionList extends LitElement {
 			clientY: this.getBoundingClientRect().bottom,
 		});
 		this.dispatchEvent(contextMenuEvent);
-
+		this.modifier = undefined;
 		const handleClick = () => {
 			const ev = new CustomEvent('close-actions-menu');
 			this.dispatchEvent(ev);
@@ -104,7 +107,7 @@ export class ActionList extends LitElement {
 				label="More actions..."
 				href="#"
 				@mousedown=${this.handleMoreActions.bind(this, from)}
-				@click=${this.handleMoreActions}
+				@click=${this.handleMoreActions.bind(this, from)}
 			>
 			</action-item>
 		`;
@@ -117,15 +120,21 @@ export class ActionList extends LitElement {
 			<action-nav>
 				${this.items.slice(0, splitValue).map(({ modifiers, ...originalProps }) => {
 					const { icon, label, href } = modifiers?.find(x => this.modifier === x.key) ?? originalProps;
-					return html`<action-item icon=${icon} label=${label} href=${ifDefined(href)}></action-item>`;
+					return html`<action-item
+						icon=${icon}
+						@click=${() => {
+							// finish event handling and clear modifier in next macrotask
+							setTimeout(() => {
+								this.modifier = undefined;
+							});
+						}}
+						label=${label}
+						href=${ifDefined(href)}
+					></action-item>`;
 				})}
 				${when(hasMore, this.renderMoreOptions.bind(this, splitValue))}
 			</action-nav>
 		`;
-	}
-
-	private handleOpenMore() {
-		// this.open = !this.open;
 	}
 
 	private handleKeydown(e: KeyboardEvent) {

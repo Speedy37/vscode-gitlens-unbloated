@@ -7414,6 +7414,11 @@
 				"icon": "$(browser)"
 			},
 			{
+				"command": "gitlens.home.openWorktreeInNewWindow",
+				"title": "Open Worktree in New Window",
+				"icon": "$(empty-window)"
+			},
+			{
 				"command": "gitlens.home.fetch",
 				"title": "Fetch",
 				"icon": "$(gl-repo-fetch)"
@@ -11093,6 +11098,10 @@
 				},
 				{
 					"command": "gitlens.home.openWorktree",
+					"when": "false"
+				},
+				{
+					"command": "gitlens.home.openWorktreeInNewWindow",
 					"when": "false"
 				},
 				{
@@ -16243,42 +16252,47 @@
 				{
 					"command": "gitlens.home.openPullRequestChanges",
 					"when": "webviewItem =~ /gitlens:home\\b(?=.*?\\b\\+.*gitlens\\.home\\.openPullRequestChanges\\b)/",
-					"group": "1_gitlens_action@1"
+					"group": "10_gitlens_action@1"
 				},
 				{
 					"command": "gitlens.home.openPullRequestOnRemote",
 					"when": "webviewItem =~ /gitlens:home\\b(?=.*?\\b\\+.*gitlens\\.home\\.openPullRequestOnRemote\\b)/",
-					"group": "1_gitlens_action@2"
+					"group": "20_gitlens_action@1"
 				},
 				{
 					"command": "gitlens.home.createPullRequest",
 					"when": "webviewItem =~ /gitlens:home\\b(?=.*?\\b\\+.*gitlens\\.home\\.createPullRequest\\b)/",
-					"group": "1_gitlens_action@3"
+					"group": "30_gitlens_action@1"
 				},
 				{
 					"command": "gitlens.home.openWorktree",
 					"when": "webviewItem =~ /gitlens:home\\b(?=.*?\\b\\+.*gitlens\\.home\\.openWorktree\\b)/",
-					"group": "1_gitlens_action@4"
+					"group": "40_gitlens_action@1"
+				},
+				{
+					"command": "gitlens.home.openWorktreeInNewWindow",
+					"when": "webviewItem =~ /gitlens:home\\b(?=.*?\\b\\+.*gitlens\\.home\\.openWorktreeInNewWindow\\b)/",
+					"group": "40_gitlens_action@2"
 				},
 				{
 					"command": "gitlens.home.switchToBranch",
 					"when": "webviewItem =~ /gitlens:home\\b(?=.*?\\b\\+.*gitlens\\.home\\.switchToBranch\\b)/",
-					"group": "1_gitlens_action@5"
+					"group": "50_gitlens_action@1"
 				},
 				{
 					"command": "gitlens.home.fetch",
 					"when": "webviewItem =~ /gitlens:home\\b(?=.*?\\b\\+.*gitlens\\.home\\.fetch\\b)/",
-					"group": "1_gitlens_action@6"
+					"group": "60_gitlens_action@1"
 				},
 				{
 					"command": "gitlens.home.pull",
 					"when": "webviewItem =~ /gitlens:home\\b(?=.*?\\b\\+.*gitlens\\.home\\.pull\\b)/",
-					"group": "1_gitlens_action@6"
+					"group": "60_gitlens_action@2"
 				},
 				{
 					"command": "gitlens.home.openInGraph",
 					"when": "webviewItem =~ /gitlens:home\\b(?=.*?\\b\\+.*gitlens\\.home\\.openInGraph\\b)/",
-					"group": "1_gitlens_action@7"
+					"group": "80_gitlens_action@1"
 				},
 				{
 					"command": "gitlens.graph.openWorktree",

@@ -260,7 +260,8 @@ export class HomeWebviewProvider implements WebviewProvider<State, State, HomeWe
 			registerCommand('gitlens.home.openPullRequestComparison', this.pullRequestCompare, this),
 			registerCommand('gitlens.home.openPullRequestOnRemote', this.pullRequestViewOnRemote, this),
 			registerCommand('gitlens.home.createPullRequest', this.pullRequestCreate, this),
-			registerCommand('gitlens.home.openWorktree', this.worktreeOpen, this),
+			registerCommand('gitlens.home.openWorktree', this.worktreeOpen.bind(this, false), this),
+			registerCommand('gitlens.home.openWorktreeInNewWindow', this.worktreeOpen.bind(this, true), this),
 			registerCommand('gitlens.home.switchToBranch', this.switchToBranch, this),
 			registerCommand('gitlens.home.fetch', this.fetch, this),
 			registerCommand('gitlens.home.pull', this.pull, this),
@@ -830,11 +831,11 @@ export class HomeWebviewProvider implements WebviewProvider<State, State, HomeWe
 		});
 	}
 
-	private worktreeOpen(refs: BranchRef) {
+	private worktreeOpen(newWindow: boolean, refs: BranchRef) {
 		const worktree = this.findWorktree(refs);
 		if (worktree == null) return;
 
-		openWorkspace(worktree.uri);
+		openWorkspace(worktree.uri, { location: newWindow ? 'newWindow' : 'currentWindow' });
 	}
 
 	private switchToBranch(refs: BranchRef) {
