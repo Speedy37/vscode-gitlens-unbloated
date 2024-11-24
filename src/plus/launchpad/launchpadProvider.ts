@@ -22,7 +22,6 @@ import {
 	getRepositoryIdentityForPullRequest,
 } from '../../git/models/pullRequest';
 import type { PullRequestURLIdentity } from '../../git/models/pullRequest.utils';
-import { getPullRequestIdentityValuesFromSearch } from '../../git/models/pullRequest.utils';
 import type { GitRemote } from '../../git/models/remote';
 import type { Repository } from '../../git/models/repository';
 import type { CodeSuggestionCounts, Draft } from '../../gk/models/drafts';
@@ -327,7 +326,8 @@ export class LaunchpadProvider implements Disposable {
 		// The current idea is that we should iterate the connected integrations and apply their parsing.
 		// Probably we even want to build a map like this: { integrationId: identity }
 		// Then we iterate connected integrations and search in each of them with the corresponding identity.
-		const prUrlIdentity = getPullRequestIdentityValuesFromSearch(search);
+		const prUrlIdentity: { [key in IntegrationId]?: PullRequestURLIdentity } =
+			await this.getPullRequestIdentityValuesFromSearch(search);
 		const result: { readonly value: SearchedPullRequest[]; duration: number } = {
 			value: [],
 			duration: 0,
@@ -335,20 +335,55 @@ export class LaunchpadProvider implements Disposable {
 
 		const connectedIntegrations = await this.getConnectedIntegrations();
 
+		const findByUrlIdentity = async (
+			integration: HostingIntegration,
+		): Promise<undefined | TimedResult<SearchedPullRequest[] | undefined>> => {
+			const { ownerAndRepo, prNumber } = prUrlIdentity[integration.id] ?? {};
+			if (prNumber != null && ownerAndRepo != null) {
+				const [owner, repo] = ownerAndRepo.split('/', 2);
+				const descriptor: GitHubRepositoryDescriptor = {
+					key: ownerAndRepo,
+					owner: owner,
+					name: repo,
+				};
+				const pr = await withDurationAndSlowEventOnTimeout(
+					integration?.getPullRequest(descriptor, prNumber),
+					'getPullRequest',
+					this.container,
+				);
+				if (pr?.value != null) {
+					return { value: [{ pullRequest: pr.value, reasons: [] }], duration: pr.duration };
+				}
+			}
+			return undefined;
+		};
+
+		const findByQuery = async (
+			integration: HostingIntegration,
+		): Promise<undefined | TimedResult<SearchedPullRequest[] | undefined>> => {
+			const prs = await withDurationAndSlowEventOnTimeout(
+				integration?.searchPullRequests(search, undefined, cancellation), //
+				'searchPullRequests',
+				this.container,
+			);
+			if (prs != null) {
+				return { value: prs.value?.map(pr => ({ pullRequest: pr, reasons: [] })), duration: prs.duration };
+			}
+			return undefined;
+		};
+
+		const hasUrlIdentity = Object.keys(prUrlIdentity).length > 0;
+		const searchIntegrationPRs = hasUrlIdentity ? findByUrlIdentity : findByQuery;
+
 		await Promise.allSettled(
 			[...connectedIntegrations.keys()]
 				.filter(
 					(id: IntegrationId): id is SupportedLaunchpadIntegrationIds =>
 						(connectedIntegrations.get(id) && isSupportedLaunchpadIntegrationId(id)) ?? false,
 				)
-				.map(async (id: HostingIntegrationId) => {
+				.map(async (id: SupportedLaunchpadIntegrationIds) => {
 					const integration = await this.container.integrations.get(id);
-					const searchResult = await this.searchIntegrationPRs(
-						search,
-						prUrlIdentity,
-						integration,
-						cancellation,
-					);
+					const searchResult = await searchIntegrationPRs(integration);
 					const prs = searchResult?.value;
 					if (prs) {
 						result.value?.push(...prs);
@@ -360,43 +395,6 @@ export class LaunchpadProvider implements Disposable {
 			prs: result,
 			suggestionCounts: undefined,
 		};
-	}
-
-	private async searchIntegrationPRs(
-		search: string,
-		{ ownerAndRepo, prNumber }: PullRequestURLIdentity,
-		integration: HostingIntegration,
-		cancellation: CancellationToken | undefined,
-	): Promise<undefined | TimedResult<SearchedPullRequest[] | undefined>> {
-		let result: TimedResult<SearchedPullRequest[] | undefined> | undefined;
-		if (prNumber != null && ownerAndRepo != null) {
-			const [owner, repo] = ownerAndRepo.split('/', 2);
-			const descriptor: GitHubRepositoryDescriptor = {
-				key: ownerAndRepo,
-				owner: owner,
-				name: repo,
-			};
-			const pr = await withDurationAndSlowEventOnTimeout(
-				integration?.getPullRequest(descriptor, prNumber),
-				'getPullRequest',
-				this.container,
-			);
-			if (pr?.value != null) {
-				result = { value: [{ pullRequest: pr.value, reasons: [] }], duration: pr.duration };
-				return result;
-			}
-		} else {
-			const prs = await withDurationAndSlowEventOnTimeout(
-				integration?.searchPullRequests(search, undefined, cancellation), //
-				'searchPullRequests',
-				this.container,
-			);
-			if (prs != null) {
-				result = { value: prs.value?.map(pr => ({ pullRequest: pr, reasons: [] })), duration: prs.duration };
-				return result;
-			}
-		}
-		return undefined;
 	}
 
 	private _enrichedItems: CachedLaunchpadPromise<TimedResult<EnrichedItem[]>> | undefined;
@@ -694,6 +692,32 @@ export class LaunchpadProvider implements Disposable {
 		await Promise.allSettled(map(this.container.git.openRepositories, r => matchRemotes(r)));
 
 		return repoRemotes;
+	}
+
+	async getPullRequestIdentityValuesFromSearch(search: string): Promise<{
+		[key in SupportedLaunchpadIntegrationIds]?: PullRequestURLIdentity;
+	}> {
+		const result: Partial<Record<SupportedLaunchpadIntegrationIds, PullRequestURLIdentity>> = {};
+		const fullResult: Partial<Record<SupportedLaunchpadIntegrationIds, PullRequestURLIdentity>> = {};
+		let hasFullResult = false;
+
+		const connectedIntegrations = await this.getConnectedIntegrations();
+
+		for (const integrationId of supportedLaunchpadIntegrations) {
+			if (connectedIntegrations.get(integrationId)) {
+				const integration = await this.container.integrations.get(integrationId);
+				const prIdentity = integration.getPullRequestIdentityValuesFromSearch?.(search);
+				if (prIdentity) {
+					result[integrationId] = prIdentity;
+				}
+				if (prIdentity?.ownerAndRepo != null) {
+					fullResult[integrationId] = prIdentity;
+					hasFullResult = true;
+				}
+			}
+		}
+
+		return hasFullResult ? fullResult : result;
 	}
 
 	@gate<LaunchpadProvider['getCategorizedItems']>(o => `${o?.force ?? false}`)

@@ -12,6 +12,7 @@ import type {
 	PullRequestState,
 	SearchedPullRequest,
 } from '../../../git/models/pullRequest';
+import type { PullRequestURLIdentity } from '../../../git/models/pullRequest.utils';
 import type { RepositoryMetadata } from '../../../git/models/repositoryMetadata';
 import { log } from '../../../system/decorators/log';
 import { uniqueBy } from '../../../system/iterable';
@@ -22,6 +23,7 @@ import type {
 } from '../authentication/integrationAuthentication';
 import { HostingIntegration } from '../integration';
 import { fromGitLabMergeRequestProvidersApi } from './gitlab/models';
+import { getGitLabPullRequestIdentityValuesFromSearch } from './gitlab.utils';
 import type { ProviderPullRequest } from './models';
 import { ProviderPullRequestReviewState, providersMetadata } from './models';
 import type { ProvidersApi } from './providersApi';
@@ -347,6 +349,10 @@ abstract class GitLabIntegrationBase<
 			avatarUrl: currentUser.avatarUrl || undefined,
 			username: currentUser.username || undefined,
 		};
+	}
+
+	override getPullRequestIdentityValuesFromSearch(search: string): PullRequestURLIdentity | undefined {
+		return getGitLabPullRequestIdentityValuesFromSearch(search);
 	}
 }
 

@@ -43,7 +43,7 @@ import type { LaunchpadTelemetryContext, Source, Sources, TelemetryEvents } from
 import type { Container } from '../../container';
 import { PlusFeatures } from '../../features';
 import { doesPullRequestSatisfyRepositoryURLIdentity } from '../../git/models/pullRequest';
-import { getPullRequestIdentityValuesFromSearch } from '../../git/models/pullRequest.utils';
+import type { PullRequestURLIdentity } from '../../git/models/pullRequest.utils';
 import type { QuickPickItemOfT } from '../../quickpicks/items/common';
 import { createQuickPickItemOfT, createQuickPickSeparator } from '../../quickpicks/items/common';
 import type { DirectiveQuickPickItem } from '../../quickpicks/items/directive';
@@ -599,14 +599,10 @@ export class LaunchpadCommand extends QuickCommand<State> {
 					return true;
 				}
 
-				// TODO: This needs to be generalized to work outside of GitHub,
-				// The current idea is that we should iterate the connected integrations and apply their parsing.
-				// Probably we even want to build a map like this: { integrationId: identity }
-				// Then when we iterate local items we can check them to corresponding identitie according to the item's repo type.
-				// Same with API: we iterate connected integrations and search in each of them with the corresponding identity.
-				const prUrlIdentity = getPullRequestIdentityValuesFromSearch(value);
+				const prUrlIdentity: { [key in string]?: PullRequestURLIdentity } =
+					await this.container.launchpad.getPullRequestIdentityValuesFromSearch(value);
 
-				if (prUrlIdentity.prNumber != null) {
+				if (Object.keys(prUrlIdentity).length > 0) {
 					// We can identify the PR number, so let's try to find it locally:
 					const launchpadItems = quickpick.items.filter((i): i is LaunchpadItemQuickPickItem => 'item' in i);
 					let item = launchpadItems.find(i =>
@@ -615,7 +611,7 @@ export class LaunchpadCommand extends QuickCommand<State> {
 					);
 					if (item == null) {
 						// Haven't found full match, so let's at least find something with the same pr number
-						item = launchpadItems.find(i => i.item.id === prUrlIdentity.prNumber);
+						item = launchpadItems.find(i => i.item.id === prUrlIdentity[i.item.provider.id]?.prNumber);
 					}
 					if (item != null) {
 						if (!item.alwaysShow) {
