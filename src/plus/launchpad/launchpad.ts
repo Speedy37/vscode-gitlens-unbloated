@@ -559,6 +559,17 @@ export class LaunchpadCommand extends QuickCommand<State> {
 				LaunchpadSettingsQuickInputButton,
 				RefreshQuickInputButton,
 			],
+
+			onDidChangeActive: quickpick => {
+				const hasActiveLaunchpadItems = quickpick.activeItems.find(i => 'item' in i);
+				if (hasActiveLaunchpadItems) {
+					this.updateItemsDebouncer.cancel();
+					return true;
+				}
+
+				return false;
+			},
+
 			onDidChangeValue: async quickpick => {
 				const { value } = quickpick;
 				const hideGroups = Boolean(value?.length);
@@ -614,15 +625,15 @@ export class LaunchpadCommand extends QuickCommand<State> {
 					}
 				}
 
-				// wait a little bit because the active quickpick is updated with some delay
-				await new Promise(resolve => setTimeout(resolve, 100));
-				const hasActiveLaunchpadItems = quickpick.activeItems.find(i => 'item' in i);
-				if (hasActiveLaunchpadItems) {
-					// We have an active item, so we can exit now without sending any requests to API
-					this.updateItemsDebouncer.cancel();
-					return true;
-				}
-
+				// Here we cannot check for active items, because they are not yet updated after the last search value.
+				// So, we immediately init updating process, without a condition.
+				// But it's delayed by a debouncer.
+				//
+				// Right after the `onDidChangeValue` it goes to `onDidChangeActive`, where active items are already updated.
+				// It happens very soon much after that the delay of the debouncer.
+				//
+				// If it occurs that the quickpic has an active item, it cancells the update operation,
+				// it happens before the update procedure starts executing.
 				await updateItems(quickpick);
 				return true;
 			},
