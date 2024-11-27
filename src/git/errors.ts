@@ -572,6 +572,7 @@ export const enum RevertErrorReason {
 	BadRevision,
 	InvalidObjectName,
 	Conflict,
+	LocalChangesWouldBeOverwritten,
 	Other,
 }
 
@@ -621,6 +622,8 @@ export class RevertError extends Error {
 				return `${baseMessage} because it is not a valid object name.`;
 			case RevertErrorReason.Conflict:
 				return `${baseMessage} it has unresolved conflicts. Resolve the conflicts and try again.`;
+			case RevertErrorReason.LocalChangesWouldBeOverwritten:
+				return `${baseMessage} because local changes would be overwritten. Commit or stash your changes first.`;
 			default:
 				return `${baseMessage}.`;
 		}
